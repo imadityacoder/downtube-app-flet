@@ -23,20 +23,24 @@ jobs:
       - name: Set Up Java
         uses: actions/setup-java@v3
         with:
-          distribution: 'oracle'
-          java-version: '17'
+          distribution: "oracle"
+          java-version: "17"
 
       - name: Set Up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.2'
-          channel: 'stable'
+          flutter-version: "3.22.2"
+          channel: "stable"
 
       - name: Install Dependencies
-        run: flutter pub get
+        run: |
+          cd ${{ github.workspace }}
+          flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          cd ${{ github.workspace }}
+          flutter build apk --release
 
       - name: Build App Bundle
         run: flutter build appbundle
