@@ -1,62 +1,63 @@
 name: "Build"
 
 on:
-  pull_request:
-    branches:
-      - dev
-      - test
   push:
     branches:
       - dev
       - test
+      - main
+  pull_request:
+    branches:
+      - dev
+      - test
 
-jobs:  
-  build:      
-    name: Build & Release 
-    runs-on: macos-latest 
+jobs:
+  build:
+    name: Build & Release
+    runs-on: macos-latest
 
     steps:
-        #1 Checkout Repository
+      # Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-        #2 Setup Java
+      # Setup Java
       - name: Set Up Java
-        uses: actions/setup-java@v3.12.0
+        uses: actions/setup-java@v3
         with:
           distribution: 'oracle'
           java-version: '17'
 
-        #3 Setup Flutter
+      # Setup Flutter
       - name: Set Up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.2'
           channel: 'stable'
 
-        #4 Install Dependencies
+      # Install Dependencies
       - name: Install Dependencies
         run: flutter pub get
-     
-        
-       #6 Building APK
+
+      # Build APK
       - name: Build APK
         run: flutter build apk --release
 
-        #7 Building App Bundle (aab)
-      - name: Build appBundle
+      # Build App Bundle (AAB)
+      - name: Build App Bundle
         run: flutter build appbundle
 
-        #8 Build IPA ( IOS Build )
+      # Build IPA (iOS Build)
       - name: Build IPA
         run: flutter build ipa --no-codesign
 
-      - name: Compress Archives and IPAs
+      # Compress iOS Build
+      - name: Compress iOS Build
         run: |
           cd build
           tar -czf ios_build.tar.gz ios
 
-        #9 Upload Artifacts
+      # Upload Artifacts
       - name: Upload Artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -66,14 +67,14 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab
             build/ios_build.tar.gz
 
-        #10 Extract Version
-      - name: Extract version from pubspec.yaml
+      # Extract Version
+      - name: Extract Version from pubspec.yaml
         id: extract_version
         run: |
-          version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
+          version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f2 | tr -d '\r')
           echo "VERSION=$version" >> $GITHUB_ENV
 
-        #11 Check if Tag Exists
+      # Check if Tag Exists
       - name: Check if Tag Exists
         id: check_tag
         run: |
@@ -83,18 +84,20 @@ jobs:
             echo "TAG_EXISTS=false" >> $GITHUB_ENV
           fi
 
-        #12 Modify Tag if it Exists
+      # Modify Tag if it Exists
       - name: Modify Tag
         if: env.TAG_EXISTS == 'true'
-        id: modify_tag
         run: |
           new_version="${{ env.VERSION }}-build-${{ github.run_number }}"
           echo "VERSION=$new_version" >> $GITHUB_ENV
-        
-        #13 Create Release
+
+      # Create GitHub Release
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/app/outputs/flutter-apk/app-release.apk,build/app/outputs/bundle/release/app-release.aab,build/ios_build.tar.gz"
+          artifacts: |
+            build/app/outputs/flutter-apk/app-release.apk,
+            build/app/outputs/bundle/release/app-release.aab,
+            build/ios_build.tar.gz
           tag: v${{ env.VERSION }}
           token: ${{ secrets.TOKEN }}
